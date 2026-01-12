@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"github/abishekP101/students-api/internal/config"
 	"log"
 	"log/slog"
 	"net/http"
@@ -11,47 +9,52 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/abishekP101/students-api/internal/config"
+	"github.com/abishekP101/students-api/internal/http/handlers/student"
+	"github.com/abishekP101/students-api/internal/postgres"
+	"github.com/abishekP101/students-api/internal/storage"
 )
 
 func main() {
 	cfg := config.MustLoad()
 
+	db, err := postgres.New(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.DB.Close() // if using pgxpool, use db.DB.Close()
+
+	slog.Info("Storage initialized", slog.String("env", cfg.Env), slog.String("version", "1.0.0"))
+
 	router := http.NewServeMux()
+	store := storage.NewPostgres(db)           // create storage
+	router.HandleFunc("/api/students", student.New(store))		
 
-	router.HandleFunc("GET /" , func(w http.ResponseWriter , r *http.Request) {
-		w.Write([]byte("Welcome to the students api"))
-
-	})
-
-	server := http.Server {
-		Addr : cfg.HTTPServer.ADDRESS,
+	server := http.Server{
+		Addr:    cfg.HTTPServer.Address,
 		Handler: router,
 	}
 
-	slog.Info("Server started ",slog.String("Address" , cfg.ADDRESS))
-	done := make(chan os.Signal , 1)
+	slog.Info("Server starting", slog.String("address", cfg.HTTPServer.Address))
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	signal.Notify(done , os.Interrupt , syscall.SIGINT , syscall.SIGTERM)
-
-
-	go func(){
-		fmt.Println("Server started")
-		err := server.ListenAndServe()
-		if err != nil{
-			log.Fatal("Failed to start server")
-	}
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Failed to start server:", err)
+		}
 	}()
 
 	<-done
 
-	slog.Info("Shutting down the server.....")
-	ctx , cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	slog.Info("Shutting down server...")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
-	if err:= server.Shutdown(ctx); err != nil {
-		slog.Error("Failed to shutdown server" , slog.String("error" , err.Error()))
+
+	if err := server.Shutdown(ctx); err != nil {
+		slog.Error("Failed to shutdown server", slog.String("error", err.Error()))
 	}
 
-	slog.Info("Server shutdown Successfully")
-
+	slog.Info("Server shutdown successfully")
 }
