@@ -13,6 +13,8 @@ type PostgresStorage struct {
 type Storage interface {
 	CreateStudent(ctx context.Context, name, email string, age int) (int64, error)
 	GetStudentById(ctx context.Context , id int64) (types.Student , error)
+	GetList(ctx context.Context) ([]types.Student , error)
+
 }
 
 func NewPostgres(db *postgres.Postgres) *PostgresStorage {
@@ -38,6 +40,42 @@ func (s *PostgresStorage) CreateStudent(
 }
 
 
+func (s *PostgresStorage) GetList(
+	ctx context.Context,
+) ([]types.Student, error) {
+
+	rows, err := s.DB.DB.Query(
+		ctx,
+		`SELECT id, name, email, age FROM students`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var students []types.Student
+
+	for rows.Next() {
+		var student types.Student
+		err := rows.Scan(
+			&student.Id,
+			&student.Name,
+			&student.Email,
+			&student.Age,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		students = append(students, student)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return students, nil
+}
 
 func (s *PostgresStorage) GetStudentById(
 	ctx context.Context,
