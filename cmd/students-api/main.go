@@ -31,7 +31,9 @@ func main() {
 	store := storage.NewPostgres(db)           // create storage
 	router.HandleFunc("POST /api/students", student.New(store))
 	router.HandleFunc("GET /api/students/{id}" , student.GetById(store))
-	router.HandleFunc("GET /api/students" , student.GetList(store))		
+	router.HandleFunc("GET /api/students" , student.GetList(store))	
+	router.HandleFunc("DELETE /api/students/{id}" , student.DeleteById(store))
+
 		
 
 	server := http.Server{

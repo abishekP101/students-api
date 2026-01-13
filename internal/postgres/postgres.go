@@ -5,7 +5,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/abishekP101/students-api/internal/config"
+	"errors"
 )
+
+var ErrStudentNotFound = errors.New("student not found")
 
 type Postgres struct {
 	DB *pgxpool.Pool

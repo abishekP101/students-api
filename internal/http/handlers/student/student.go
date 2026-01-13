@@ -7,12 +7,14 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/abishekP101/students-api/internal/postgres"
 	"github.com/abishekP101/students-api/internal/storage"
 	"github.com/abishekP101/students-api/internal/types"
 	"github.com/abishekP101/students-api/internal/utils/response"
 
-	"github.com/go-playground/validator/v10"
 	"strconv"
+
+	"github.com/go-playground/validator/v10"
 )
 
 func New(store storage.Storage) http.HandlerFunc {
@@ -95,5 +97,44 @@ func GetList(store storage.Storage) http.HandlerFunc {
 		}
 
 		response.WriteJson(w, http.StatusOK, students)
+	}
+}
+
+func DeleteById(store storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idParam := r.PathValue("id")
+		slog.Info("Deleting a student", slog.String("id", idParam))
+
+		id, err := strconv.ParseInt(idParam, 10, 64)
+		if err != nil {
+			response.WriteJson(
+				w,
+				http.StatusBadRequest,
+				response.GeneralError(errors.New("invalid student id")),
+			)
+			return
+		}
+
+		err = store.DeleteStudentById(r.Context(), id)
+		if err != nil {
+			if errors.Is(err, postgres.ErrStudentNotFound) {
+				response.WriteJson(
+					w,
+					http.StatusNotFound,
+					response.GeneralError(err),
+				)
+				return
+			}
+
+			response.WriteJson(
+				w,
+				http.StatusInternalServerError,
+				response.GeneralError(err),
+			)
+			return
+		}
+
+		// 204 No Content is standard for DELETE
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

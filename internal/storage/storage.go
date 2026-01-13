@@ -7,6 +7,7 @@ import (
 	"github.com/abishekP101/students-api/internal/types"
 )
 
+
 type PostgresStorage struct {
 	DB *postgres.Postgres
 }
@@ -14,6 +15,8 @@ type Storage interface {
 	CreateStudent(ctx context.Context, name, email string, age int) (int64, error)
 	GetStudentById(ctx context.Context , id int64) (types.Student , error)
 	GetList(ctx context.Context) ([]types.Student , error)
+	DeleteStudentById(ctx context.Context, id int64) error
+
 
 }
 
@@ -96,4 +99,26 @@ func (s *PostgresStorage) GetStudentById(
 	)
 
 	return student, err
+}
+
+func (s *PostgresStorage) DeleteStudentById(
+	ctx context.Context,
+	id int64,
+) error {
+
+	cmdTag, err := s.DB.DB.Exec(
+		ctx,
+		`DELETE FROM students WHERE id = $1`,
+		id,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Optional: check if a row was actually deleted
+	if cmdTag.RowsAffected() == 0 {
+		return postgres.ErrStudentNotFound // or define your own error
+	}
+
+	return nil
 }
