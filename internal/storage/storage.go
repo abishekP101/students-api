@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/abishekP101/students-api/internal/postgres"
+	"github.com/abishekP101/students-api/internal/types"
 )
 
 type PostgresStorage struct {
@@ -11,6 +12,7 @@ type PostgresStorage struct {
 }
 type Storage interface {
 	CreateStudent(ctx context.Context, name, email string, age int) (int64, error)
+	GetStudentById(ctx context.Context , id int64) (types.Student , error)
 }
 
 func NewPostgres(db *postgres.Postgres) *PostgresStorage {
@@ -36,3 +38,24 @@ func (s *PostgresStorage) CreateStudent(
 }
 
 
+
+func (s *PostgresStorage) GetStudentById(
+	ctx context.Context,
+	id int64,
+) (types.Student, error) {
+
+	var student types.Student
+
+	err := s.DB.DB.QueryRow(
+		ctx,
+		`SELECT id, name, email, age FROM students WHERE id = $1`,
+		id,
+	).Scan(
+		&student.Id,
+		&student.Name,
+		&student.Email,
+		&student.Age,
+	)
+
+	return student, err
+}

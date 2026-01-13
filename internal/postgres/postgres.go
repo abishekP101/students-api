@@ -20,7 +20,7 @@ func New(cfg *config.Config) (*Postgres, error) {
 	// verify connection
 	if err := db.Ping(context.Background()); err != nil {
 		return nil, err
-	}
+	} 
 
 	// create table
 	_, err = db.Exec(context.Background(), `

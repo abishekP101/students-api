@@ -29,7 +29,8 @@ func main() {
 
 	router := http.NewServeMux()
 	store := storage.NewPostgres(db)           // create storage
-	router.HandleFunc("/api/students", student.New(store))		
+	router.HandleFunc("/api/students", student.New(store))
+	router.HandleFunc("/api/students/{id}" , student.GetById(store))		
 
 	server := http.Server{
 		Addr:    cfg.HTTPServer.Address,
